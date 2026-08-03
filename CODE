@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Car Arena Game</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #222;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #gameUi {
+            position: absolute;
+            color: white;
+            text-align: center;
+            z-index: 10;
+        }
+        #scoreBoard {
+            font-size: 24px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background: #ff4757;
+            color: white;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        button:hover {
+            background: #ff6b81;
+        }
+        #arena {
+            position: relative;
+            width: 400px;
+            height: 600px;
+            background: #333;
+            border: 4px solid #fff;
+            overflow: hidden;
+            display: none;
+        }
+        .car {
+            position: absolute;
+            width: 40px;
+            height: 70px;
+            border-radius: 5px;
+        }
+        #player {
+            background: #1e90ff;
+            bottom: 20px;
+            left: 180px;
+        }
+        .enemy {
+            background: #ff4757;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="gameUi">
+        <div id="scoreBoard">Score: <span id="score">0</span></div>
+        <button id="startBtn" onclick="startGame()">Start Game</button>
+    </div>
+
+    <div id="arena">
+        <div id="player" class="car"></div>
+    </div>
+
+    <script>
+        const arena = document.getElementById('arena');
+        const player = document.getElementById('player');
+        const scoreDisplay = document.getElementById('score');
+        const startBtn = document.getElementById('startBtn');
+        const gameUi = document.getElementById('gameUi');
+
+        let score = 0;
+        let gameActive = false;
+        let enemySpeed = 4;
+        let spawnRate = 1200; 
+        let playerX = 180;
+        const playerSpeed = 8;
+        const keys = {};
+
+        // Track movement keys
+        document.addEventListener('keydown', (e) => { keys[e.code] = true; });
+        document.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+        function startGame() {
+            // Reset state
+            score = 0;
+            enemySpeed = 4;
+            playerX = 180;
+            player.style.left = playerX + 'px';
+            scoreDisplay.innerText = score;
+            gameActive = true;
+            
+            // UI Toggle
+            gameUi.style.position = 'absolute';
+            gameUi.style.top = '20px';
+            startBtn.style.display = 'none';
+            arena.style.display = 'block';
+
+            // Clear old enemies
+            document.querySelectorAll('.enemy').forEach(el => el.remove());
+
+            // Start Loops
+            gameLoop();
+            spawnEnemies();
+        }
+
+        function gameLoop() {
+            if (!gameActive) return;
+
+            // Handle Input
+            if (keys['ArrowLeft'] && playerX > 0) {
+                playerX -= playerSpeed;
+            }
+            if (keys['ArrowRight'] && playerX < 360) {
+                playerX += playerSpeed;
+            }
+            player.style.left = playerX + 'px';
+
+            // Move Enemies & Check Collisions
+            const enemies = document.querySelectorAll('.enemy');
+            enemies.forEach(enemy => {
+                let enemyY = parseFloat(enemy.style.top) || 0;
+                enemyY += enemySpeed;
+                enemy.style.top = enemyY + 'px';
+
+                // Check boundary out of bounds
+                if (enemyY > 600) {
+                    enemy.remove();
+                    score++;
+                    scoreDisplay.innerText = score;
+                    
+                    // Progressive difficulty setup
+                    if (score % 5 === 0) {
+                        enemySpeed += 0.5;
+                    }
+                }
+
+                // AABB Collision Detection
+                if (isColliding(player, enemy)) {
+                    gameOver();
+                }
+            });
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function spawnEnemies() {
+            if (!gameActive) return;
+
+            const enemy = document.createElement('div');
+            enemy.classList.add('car', 'enemy');
+            
+            // Random Horizontal Lane Positioning
+            const randomX = Math.floor(Math.random() * 360);
+            enemy.style.left = randomX + 'px';
+            enemy.style.top = '-70px';
+            
+            arena.appendChild(enemy);
+
+            // Dynamic spawning interval based on score
+            setTimeout(spawnEnemies, Math.max(400, spawnRate - (score * 15)));
+        }
+
+        function isColliding(rect1, rect2) {
+            const r1 = rect1.getBoundingClientRect();
+            const r2 = rect2.getBoundingClientRect();
+
+            return !(r1.right < r2.left || 
+                     r1.left > r2.right || 
+                     r1.bottom < r2.top || 
+                     r1.top > r2.bottom);
+        }
+
+        function gameOver() {
+            gameActive = false;
+            startBtn.innerText = "Play Again";
+            startBtn.style.display = 'inline-block';
+            gameUi.style.position = 'absolute';
+            gameUi.style.top = '50%';
+            alert(`Game Over! Your Final Score: ${score}`);
+        }
+    </script>
+</body>
+</html>
